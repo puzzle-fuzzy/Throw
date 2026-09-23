@@ -242,12 +242,22 @@ type ServerMessage =
 - 请求体上限经 `serve.maxRequestBodySize`（= 服务端分片上限 + 1MB）
 - 下载响应头完全自管（`application/octet-stream` + `Content-Disposition: attachment` + `nosniff` + `Cache-Control: no-store`）
 
+## 9.2 实现备注（阶段③，2026-09-23）
+
+- 版本：React 19.3 · react-router 8.4 · zustand 5 · HeroUI 3.2.6 · Tailwind v4（@tailwindcss/vite）· lucide-react · Vitest 3 + RTL
+- **HeroUI v3 关键认知**：`Toast.Provider` 是 ToastRegion（Toast 队列渲染区，**不透传应用 children**，须与 App 平级挂载）；`TextField`/`TextArea`/`Input` 是 react-aria 原语（Label/Input 组合子、TextArea 为事件式 onChange）；命令式 `toast.success/danger/info/warning`；Modal/AlertDialog 为 trigger 模式（首个子元素即触发器，内部按钮自动关闭）
+- **StrictMode 陷阱**：初始化 effect 的"已初始化"守卫在双执行（mount→cleanup→mount）下会把连接永久关闭——依赖数组本身就是单例边界，不要加手动守卫
+- 通道决策缓存放 TransferManager 实例（页面刷新即重置）；P2P 链路管理：发送方一律作为发起方建链，双方同时发起时 creator 让位；answerer 收到新 offer 且旧链已应答完成（signalingState ≠ have-remote-offer）时跟随重建
+- **调试参数**：`?relay=1` 强制中转通道；`?hostonly=1` 禁用 STUN 仅用 host 候选
+- **已知环境限制（待复验）**：本机 IAB(WKWebView) + Clash TUN 组合下，跨标签页 WebRTC 的信令/ICE/SCTP 建链全部成功、`dc.send` 不抛，但对端应用层收不到任何 DataChannel 消息（同环境新建裸 RTCPeerConnection 手工链路可通）；探测超时后按设计自动回退中转，功能不受影响。P2P 数据面需在无 TUN 代理的普通网络环境复验
+- E2E 已验证（真实双标签页 + 真实后端）：首页全流程、建房/加入/链接直达预填、文本双向、中转文件全链路（上传→下载→缩略图→保存→即删回执）、图片预览、刷新恢复会话（宽限重连）、离开确认→双方终态
+
 ## 10. 阶段规划与验证口径
 
 | 阶段 | 范围 | 验证 |
 | --- | --- | --- |
 | ①（已完成） | 本设计文档 + [前端设计](frontend-design.md) + PRODUCT.md | 用户确认（2026-09-23） |
-| ②（已完成） | `packages/contracts` + `apps/api`（房间状态机、WS、中转、清理、限流） | `bun run verify`（typecheck + 41 测试 + lint）；含双客户端 WS 端到端（加入/信令/文本/中转上传下载/即删/断线重连补发）；真实进程 smoke（接口 + SIGTERM 优雅关停清空临时目录） |
-| ③（待开始） | `apps/web`（HeroUI v3）+ Eden 接通 + P2P/自适应 + 全部交互态 | Vitest 组件测试；真实双端浏览器验证（320/390/600/1280、亮暗主题、拖拽/粘贴、P2P 与中转回退、断网重连）；参数标定 |
+| ②（已完成） | `packages/contracts` + `apps/api`（房间状态机、WS、中转、清理、限流、结构化日志） | `bun run verify`（typecheck + 测试 + lint）；含双客户端 WS 端到端；真实进程 smoke（接口 + SIGTERM 优雅关停清空临时目录） |
+| ③（已完成） | `apps/web`（HeroUI v3 全部页面与交互、Eden 接通、WS 心跳重连、P2P/中转自适应传输） | `bun run verify` 全绿（60 测试，web 为 Vitest + RTL）；真实双标签页浏览器 E2E（建房/加入/文本/中转文件全链路/图片预览/刷新恢复/离开销毁）；**P2P 数据面在本机特殊网络环境未通（自动回退中转），待普通网络复验**（见 §9.2） |
 
 依赖顺序：contracts → api → web。阶段②开始前如本设计有修订，先同步更新本文与 PRODUCT.md。

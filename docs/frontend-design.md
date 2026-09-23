@@ -1,6 +1,6 @@
 # Throw 前端设计
 
-> 状态：**阶段① 设计文档，「仅计划」，尚未实现；组件名以 HeroUI v3.2.6 实际清单为准。**
+> 状态：**阶段③已实现（2026-09-23）**，组件以 HeroUI v3.2.6 实际清单为准；实现期的 API 修正与已知环境限制见 [architecture.md §9.2](architecture.md)。
 > 产品边界见 [PRODUCT.md](../PRODUCT.md)，传输通道与协议见 [architecture.md](architecture.md)。
 
 ## 1. 技术选型

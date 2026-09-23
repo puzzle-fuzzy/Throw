@@ -2,7 +2,7 @@
 
 临时一对一传输房间：无需登录，创建或加入房间后像聊天一样互发文本与文件。文件优先 P2P 直传、不落云端，P2P 不可用时自动回退服务器中转（即传即删）。单文件 ≤ 100MB。
 
-> **当前状态：阶段②（后端）已交付**——`packages/contracts` 与 `apps/api` 可运行、测试全绿；阶段③前端（`apps/web`）待开始。
+> **当前状态：阶段①②③全部交付**——设计文档、后端（`packages/contracts` + `apps/api`）与前端（`apps/web`）均已实现并通过验证（P2P 数据面在本机特殊网络环境的复验除外，见 docs/architecture.md §9.2）。
 
 ## 文档导航
 
@@ -13,13 +13,16 @@
 | [docs/frontend-design.md](./docs/frontend-design.md) | 页面与线框、HeroUI v3 组件方案、交互细节、状态模型、验证计划 |
 | [deploy/README.md](./deploy/README.md) | 部署清单、Caddy/systemd 示例 |
 
-## 快速开始（API）
+## 快速开始
 
 ```bash
 bun install
-bun run dev            # apps/api 开发模式（127.0.0.1:3000，watch）
-bun run verify         # typecheck + 全部测试 + lint
+bun run --cwd apps/api dev        # 后端：127.0.0.1:3000（watch）
+bun run --cwd apps/web dev        # 前端：Vite（默认 5173，/rooms /relay /health /ws 代理到 3000）
+bun run verify                    # typecheck + 全部测试（bun test + vitest）+ lint
 ```
+
+浏览器打开前端地址即可创建/加入房间。调试参数：房间链接加 `?relay=1` 强制中转通道、`?hostonly=1` 禁用 STUN 仅 host 候选。
 
 - REST 前缀无：`GET /health`、`POST /rooms`、`GET /rooms/:code`、`POST /rooms/:code/join`、`POST /relay/rooms/:code/files`、`GET /relay/files/:fileId`、`DELETE /relay/files/:fileId`
 - WebSocket：`/ws`，首帧 `{"type":"hello","token":"..."}` 鉴权
