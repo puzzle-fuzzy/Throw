@@ -25,6 +25,8 @@ export interface TransferManagerDeps {
   forceRelay: boolean;
   onChannelChange: (channel: 'p2p' | 'relay' | null) => void;
   onSystem: (text: string) => void;
+  /** 任何传输活动（发送/接收开始、完成、取消）触发，用于重置房间空闲倒计时 */
+  onTransferActivity?: () => void;
 }
 
 interface IncomingP2P {
@@ -246,6 +248,7 @@ export class TransferManager {
     const channel = preferChannel ?? (await this.pickChannel());
     useChat.getState().patchTransfer(fileId, { channel, status: 'offering' });
     this.deps.onChannelChange(channel);
+    this.deps.onTransferActivity?.();
     const offered = this.deps.socket.send({ type: 'file-offer', file: meta, channel });
     if (!offered) {
       useChat.getState().patchTransfer(fileId, { status: 'failed', error: '连接不可用' });
@@ -319,6 +322,14 @@ export class TransferManager {
   // ---------- 服务端消息入口（useRoom 转发） ----------
 
   handleServerMessage(msg: ServerMessage): void {
+    if (
+      msg.type === 'file-offer' ||
+      msg.type === 'relay-notify' ||
+      msg.type === 'file-cancel' ||
+      msg.type === 'file-complete'
+    ) {
+      this.deps.onTransferActivity?.();
+    }
     switch (msg.type) {
       case 'file-offer': {
         useChat.getState().addTransfer({
@@ -428,6 +439,7 @@ export class TransferManager {
         useChat
           .getState()
           .patchTransfer(control.fileId, { status: 'transferring', channel: 'p2p' });
+        this.deps.onTransferActivity?.();
         return;
       }
       case 'ack': {

@@ -1,5 +1,5 @@
 import { toast } from '@heroui/react';
-import type { ServerMessage } from '@throw/contracts';
+import { LIMITS, type ServerMessage } from '@throw/contracts';
 import { useCallback, useEffect, useRef } from 'react';
 import { TransferManager } from '../lib/transfer';
 import { RoomSocket } from '../lib/ws-client';
@@ -68,6 +68,8 @@ export function useRoomConnection(session: RoomSession): UseRoomConnectionResult
       forceRelay: forceRelay,
       onChannelChange: (channel) => useRoom.getState().setChannel(channel),
       onSystem: (text) => useChat.getState().addSystem(text),
+      onTransferActivity: () =>
+        useRoom.getState().setExpiresAt(Date.now() + LIMITS.TRANSFER_IDLE_EXPIRE_MS),
     });
     manager.sessionRef = { code: session.code, token: session.token };
     managerRef.current = manager;
@@ -87,7 +89,9 @@ export function useRoomConnection(session: RoomSession): UseRoomConnectionResult
         case 'peer-joined':
           store.setPeer(msg.peer);
           store.setPhase('connected');
-          chat.addSystem(`${msg.peer.nickname ?? '对方'} 已加入房间`);
+          // 房间转入 active：空闲倒计时从 30 分钟起算（等待期的 2 小时语义失效）
+          store.setExpiresAt(Date.now() + LIMITS.TRANSFER_IDLE_EXPIRE_MS);
+          chat.addSystem(`${msg.peer.nickname ?? '游客'} 已加入房间`);
           return;
         case 'peer-left':
           store.setPhase('peer-left');

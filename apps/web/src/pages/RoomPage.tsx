@@ -38,6 +38,8 @@ export function RoomPage() {
   }, [session, code, navigate, redirected]);
 
   const connection = useRoomConnection(session ?? { code, token: '', role: 'creator' as const });
+  // 对方临时头像种子：双方由（房间码, 对方角色）独立算出一致结果
+  const peerSeed = `${code}:${session?.role === 'joiner' ? 'creator' : 'joiner'}`;
 
   // beforeunload 守卫：会话进行中离开页面提示（刷新/关闭都会丢会话）
   useEffect(() => {
@@ -154,6 +156,7 @@ export function RoomPage() {
           onCancel={connection.cancelTransfer}
           onRetry={connection.retryTransfer}
           onDownload={handleDownload}
+          peerSeed={peerSeed}
         />
       )}
 

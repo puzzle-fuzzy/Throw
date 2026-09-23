@@ -24,6 +24,8 @@ export const LIMITS = {
   GRACE_MS: 5 * 60 * 1000,
   /** waiting 房间无人加入的过期时间 */
   WAITING_EXPIRE_MS: 2 * 60 * 60 * 1000,
+  /** active 房间文件传输空闲过期时间（自最后一次传输活动起倒计时） */
+  TRANSFER_IDLE_EXPIRE_MS: 30 * 60 * 1000,
   /** 房间绝对寿命上限 */
   ROOM_ABSOLUTE_MAX_AGE_MS: 24 * 60 * 60 * 1000,
   /** 客户端心跳间隔 */

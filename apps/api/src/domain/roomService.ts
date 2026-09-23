@@ -25,6 +25,8 @@ export interface Room {
   state: 'waiting' | 'active' | 'closed';
   createdAt: number;
   lastActiveAt: number;
+  /** 最后一次文件传输活动（offer/分片/下载/取消/回执），active 房间空闲倒计时的锚点 */
+  lastTransferAt: number;
   members: Member[];
 }
 
@@ -65,6 +67,7 @@ export class RoomService {
       state: 'waiting',
       createdAt: now,
       lastActiveAt: now,
+      lastTransferAt: now,
       members: [
         {
           token,
@@ -125,6 +128,11 @@ export class RoomService {
 
   touchMember(member: Member): void {
     member.lastSeenAt = this.deps.now();
+  }
+
+  /** 文件传输活动：重置 active 房间的空闲倒计时 */
+  touchTransfer(room: Room): void {
+    room.lastTransferAt = this.deps.now();
   }
 
   /** hello：绑定 socket。token 无效或房间已关返回 null。 */
@@ -197,10 +205,13 @@ export class RoomService {
     return { code: room.code, status: room.state, expiresAt: this.expiresAtOf(room) };
   }
 
+  /** waiting：无人加入过期；active：文件传输空闲倒计时（30min），受绝对寿命约束 */
   expiresAtOf(room: Room): number {
-    return room.state === 'waiting'
-      ? room.createdAt + LIMITS.WAITING_EXPIRE_MS
-      : room.createdAt + LIMITS.ROOM_ABSOLUTE_MAX_AGE_MS;
+    if (room.state === 'waiting') return room.createdAt + LIMITS.WAITING_EXPIRE_MS;
+    return Math.min(
+      room.lastTransferAt + LIMITS.TRANSFER_IDLE_EXPIRE_MS,
+      room.createdAt + LIMITS.ROOM_ABSOLUTE_MAX_AGE_MS,
+    );
   }
 
   /**
@@ -239,8 +250,10 @@ export class RoomService {
       const empty = room.members.length === 0;
       const waitingExpired =
         room.state === 'waiting' && now - room.createdAt > LIMITS.WAITING_EXPIRE_MS;
+      const transferIdle =
+        room.state === 'active' && now - room.lastTransferAt > LIMITS.TRANSFER_IDLE_EXPIRE_MS;
       const tooOld = now - room.createdAt > LIMITS.ROOM_ABSOLUTE_MAX_AGE_MS;
-      if (empty || waitingExpired || tooOld) {
+      if (empty || waitingExpired || transferIdle || tooOld) {
         this.destroy(room.code, 'expired');
         destroyed.push(room.code);
       }

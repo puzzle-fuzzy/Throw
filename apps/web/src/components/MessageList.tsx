@@ -1,17 +1,20 @@
-import { Avatar, ScrollShadow } from '@heroui/react';
+import { ScrollShadow } from '@heroui/react';
 import { ArrowDown } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 import { formatClock } from '../lib/format';
 import { useChat } from '../stores/chat';
 import { FileCard } from './FileCard';
+import { Identicon } from './Identicon';
 
 interface MessageListProps {
   onCancel: (fileId: string) => void;
   onRetry: (fileId: string) => void;
   onDownload: (transfer: { blobUrl?: string; name: string }) => void;
+  /** 对方临时头像种子（房间码:角色），双方独立计算结果一致 */
+  peerSeed: string;
 }
 
-export function MessageList({ onCancel, onRetry, onDownload }: MessageListProps) {
+export function MessageList({ onCancel, onRetry, onDownload, peerSeed }: MessageListProps) {
   const items = useChat((state) => state.items);
   const transfers = useChat((state) => state.transfers);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -55,9 +58,7 @@ export function MessageList({ onCancel, onRetry, onDownload }: MessageListProps)
                   className={`flex items-end gap-2 ${item.mine ? 'flex-row-reverse self-end' : 'self-start'}`}
                 >
                   {!item.mine && (
-                    <Avatar size="sm" color="default" className="shrink-0">
-                      <Avatar.Fallback>{'友'}</Avatar.Fallback>
-                    </Avatar>
+                    <Identicon seed={peerSeed} size={28} className="bg-default p-0.5" />
                   )}
                   <div
                     className={`max-w-[78%] rounded-2xl px-3.5 py-2 text-sm leading-relaxed break-words whitespace-pre-wrap ${

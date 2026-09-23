@@ -1,5 +1,7 @@
 import { AlertDialog, Button, Chip, Dropdown, Tooltip, toast } from '@heroui/react';
-import { Copy, Link2, LogOut, MoonStar, MoreHorizontal } from 'lucide-react';
+import { Copy, Link2, LogOut, MoonStar, MoreHorizontal, Timer } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { formatCountdown } from '../lib/format';
 import { useRoom } from '../stores/room';
 
 interface RoomHeaderProps {
@@ -12,6 +14,13 @@ export function RoomHeader({ code, onLeave, onToggleTheme }: RoomHeaderProps) {
   const phase = useRoom((state) => state.phase);
   const channel = useRoom((state) => state.channel);
   const wsStatus = useRoom((state) => state.wsStatus);
+  const expiresAt = useRoom((state) => state.expiresAt);
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   const copyCode = async () => {
     await navigator.clipboard.writeText(code);
@@ -47,6 +56,21 @@ export function RoomHeader({ code, onLeave, onToggleTheme }: RoomHeaderProps) {
             中转模式
           </Chip>
         ) : null)}
+
+      {phase === 'connected' && expiresAt !== null && (
+        <Tooltip>
+          <Tooltip.Trigger>
+            <span className="flex items-center gap-1 text-xs text-muted">
+              <Timer className="size-3.5" />
+              {formatCountdown(expiresAt, now)}
+            </span>
+          </Tooltip.Trigger>
+          <Tooltip.Content>
+            <Tooltip.Arrow />
+            文件传输空闲 30 分钟后房间自动关闭；新的传输会重置倒计时
+          </Tooltip.Content>
+        </Tooltip>
+      )}
 
       {wsStatus === 'reconnecting' && (
         <span className="text-xs text-warning-soft-foreground">重连中…</span>

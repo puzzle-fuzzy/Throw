@@ -182,6 +182,7 @@ export class WsHub {
         });
         return;
       case 'file-offer': {
+        this.deps.rooms.touchTransfer(room);
         if (msg.channel === 'relay') {
           this.deps.relay.registerMeta(room.code, msg.file, member.token);
         }
@@ -194,6 +195,7 @@ export class WsHub {
         return;
       }
       case 'file-cancel': {
+        this.deps.rooms.touchTransfer(room);
         if (peer) {
           this.deps.rooms.sendTo(peer, { type: 'file-cancel', fileId: msg.fileId });
         }
@@ -201,6 +203,7 @@ export class WsHub {
         return;
       }
       case 'relay-downloaded': {
+        this.deps.rooms.touchTransfer(room);
         const result = this.deps.relay
           .markDownloaded(msg.fileId)
           .then(({ senderToken }) => {

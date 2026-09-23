@@ -17,7 +17,8 @@ export function relayRoutes(deps: AppDeps) {
       '/relay/rooms/:code/files',
       async ({ params, query, request }) => {
         requireOrigin(deps.config, request);
-        const { member } = authenticate(deps.rooms, request, params.code);
+        const { room, member } = authenticate(deps.rooms, request, params.code);
+        deps.rooms.touchTransfer(room);
         const fileId = String(query.fileId ?? '');
         const offset = Number(query.offset);
         const done = query.done === '1';
@@ -45,7 +46,12 @@ export function relayRoutes(deps: AppDeps) {
     .get('/relay/files/:fileId', async ({ params, request, set }) => {
       const opened = await deps.relay.openDownload(params.fileId, request.headers.get('range'));
       if (opened === null) throw errors.unknownFile();
-      authenticate(deps.rooms, request, 'unsatisfiable' in opened ? undefined : opened.code);
+      const { room } = authenticate(
+        deps.rooms,
+        request,
+        'unsatisfiable' in opened ? undefined : opened.code,
+      );
+      deps.rooms.touchTransfer(room);
       if ('unsatisfiable' in opened) {
         set.status = 416;
         set.headers['content-range'] = `bytes */${opened.size}`;
@@ -79,7 +85,8 @@ export function relayRoutes(deps: AppDeps) {
       requireOrigin(deps.config, request);
       const code = deps.relay.locate(params.fileId);
       if (!code) throw errors.unknownFile();
-      authenticate(deps.rooms, request, code);
+      const { room } = authenticate(deps.rooms, request, code);
+      deps.rooms.touchTransfer(room);
       await deps.relay.cancel(code, params.fileId);
       return { ok: true };
     });

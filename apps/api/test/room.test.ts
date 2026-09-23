@@ -165,4 +165,52 @@ describe('RoomService 状态机', () => {
     service.sweep();
     expect(destroyed).toContain(other.code);
   });
+
+  test('传输空闲 30 分钟销毁，传输活动续期', () => {
+    const { service, advance, destroyed } = makeService();
+    const created = service.createRoom(null);
+    const joined = service.joinRoom(created.code, null);
+    service.attach(created.token, fakeWs());
+    service.attach(joined.token, fakeWs());
+
+    // 无任何传输活动：30 分钟后销毁
+    advance(LIMITS.TRANSFER_IDLE_EXPIRE_MS + 1);
+    service.sweep();
+    expect(destroyed).toContain(created.code);
+
+    // 有传输活动：空闲计时从最后一次活动重新起算
+    const room2 = service.createRoom(null);
+    const join2 = service.joinRoom(room2.code, null);
+    service.attach(room2.token, fakeWs());
+    service.attach(join2.token, fakeWs());
+    advance(20 * 60_000);
+    const roomObj = service.getRoom(room2.code)!;
+    service.touchTransfer(roomObj);
+    advance(29 * 60_000);
+    service.sweep();
+    expect(destroyed).not.toContain(room2.code);
+    advance(2 * 60_000);
+    service.sweep();
+    expect(destroyed).toContain(room2.code);
+  });
+
+  test('expiresAt：waiting 用 2h；active 锚定最后一次传输活动并受绝对寿命约束', () => {
+    const { service, advance } = makeService();
+    const created = service.createRoom(null);
+    const base = service.expiresAtOf(service.getRoom(created.code)!);
+    expect(base - (base - LIMITS.WAITING_EXPIRE_MS)).toBe(LIMITS.WAITING_EXPIRE_MS);
+
+    const joined = service.joinRoom(created.code, null);
+    advance(10 * 60_000);
+    const roomObj = service.getRoom(created.code)!;
+    const idleAnchor = service.expiresAtOf(roomObj);
+    expect(idleAnchor).toBe(roomObj.lastTransferAt + LIMITS.TRANSFER_IDLE_EXPIRE_MS);
+
+    // 接近绝对寿命时取小
+    advance(LIMITS.ROOM_ABSOLUTE_MAX_AGE_MS);
+    service.touchTransfer(service.getRoom(created.code)!);
+    const capped = service.expiresAtOf(service.getRoom(created.code)!);
+    expect(capped).toBe(roomObj.createdAt + LIMITS.ROOM_ABSOLUTE_MAX_AGE_MS);
+    expect(joined.token).toBeTruthy();
+  });
 });
