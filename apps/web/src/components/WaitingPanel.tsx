@@ -39,7 +39,7 @@ export function WaitingPanel({ code, expiresAt }: WaitingPanelProps) {
             {code}
           </button>
           <div className="flex w-full flex-col gap-2">
-            <Button variant="outline" onPress={() => void copyLink()}>
+            <Button variant="outline" fullWidth onPress={() => void copyLink()}>
               <Link2 className="size-4" />
               复制邀请链接
             </Button>
