@@ -1,0 +1,20 @@
+{
+  "name": "@throw/contracts",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@sinclair/typebox": "^0.34.52"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.4.2",
+    "typescript": "^7.0.2"
+  }
+}
