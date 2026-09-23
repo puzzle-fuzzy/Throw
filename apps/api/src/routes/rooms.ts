@@ -2,11 +2,7 @@ import { isValidRoomCode, LIMITS, normalizeRoomCode } from '@throw/contracts';
 import { Elysia, t } from 'elysia';
 import type { AppDeps } from '../deps';
 import { AppError, errors } from '../domain/errors';
-import { clientIp, codeHash, normalizeNickname, requireOrigin } from '../http';
-
-const nicknameSchema = t.Object({
-  nickname: t.Optional(t.String({ maxLength: LIMITS.MAX_NICKNAME_CHARS })),
-});
+import { clientIp, codeHash, requireOrigin } from '../http';
 
 export function roomsRoutes(deps: AppDeps) {
   return new Elysia({ name: 'routes.rooms' })
@@ -16,11 +12,11 @@ export function roomsRoutes(deps: AppDeps) {
         requireOrigin(deps.config, request);
         const ip = clientIp(request, server);
         if (!deps.limiter.allowCreate(ip)) throw errors.rateLimited('创建房间过于频繁');
-        const created = deps.rooms.createRoom(normalizeNickname(body.nickname));
+        const created = deps.rooms.createRoom();
         deps.logger.info({ event: 'room.create', room: codeHash(created.code) }, '房间创建');
         return { code: created.code, token: created.token, expiresAt: created.expiresAt };
       },
-      { body: nicknameSchema },
+      { body: t.Object({}) },
     )
     .get('/rooms/:code', ({ params }) => {
       const code = normalizeRoomCode(params.code);
@@ -39,7 +35,7 @@ export function roomsRoutes(deps: AppDeps) {
         }
         if (!deps.limiter.allowJoin(ip)) throw errors.rateLimited('加入请求过于频繁');
         try {
-          const joined = deps.rooms.joinRoom(code, normalizeNickname(body.nickname));
+          const joined = deps.rooms.joinRoom(code);
           deps.logger.info({ event: 'room.join', room: codeHash(code) }, '成员加入');
           return { token: joined.token, expiresAt: joined.expiresAt };
         } catch (error) {
@@ -52,6 +48,6 @@ export function roomsRoutes(deps: AppDeps) {
           throw error;
         }
       },
-      { body: nicknameSchema },
+      { body: t.Object({}) },
     );
 }

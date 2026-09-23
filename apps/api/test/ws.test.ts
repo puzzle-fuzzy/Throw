@@ -82,21 +82,21 @@ class WsClient {
   }
 }
 
-async function restCreate(nickname: string): Promise<{ code: string; token: string }> {
+async function restCreate(): Promise<{ code: string; token: string }> {
   const res = await fetch(`${base}/rooms`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ nickname }),
+    body: '{}',
   });
   if (!res.ok) throw new Error(`create 失败: ${res.status}`);
   return (await res.json()) as { code: string; token: string };
 }
 
-async function restJoin(code: string, nickname: string): Promise<{ token: string }> {
+async function restJoin(code: string): Promise<{ token: string }> {
   const res = await fetch(`${base}/rooms/${code}/join`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ nickname }),
+    body: '{}',
   });
   if (!res.ok) throw new Error(`join 失败: ${res.status}`);
   return (await res.json()) as { token: string };
@@ -104,21 +104,21 @@ async function restJoin(code: string, nickname: string): Promise<{ token: string
 
 describe('WS 端到端（双客户端）', () => {
   test('完整流程：加入、心跳、文本、信令、中转上传下载、即删、离开', async () => {
-    const room = await restCreate('小明');
+    const room = await restCreate();
     const a = await WsClient.connect();
     a.send({ type: 'hello', token: room.token });
     const joinedA = await a.expectType('joined');
     expect(joinedA.room).toMatchObject({ code: room.code, status: 'waiting' });
     expect(joinedA.peer).toBeNull();
 
-    const joinB = await restJoin(room.code, '小红');
+    const joinB = await restJoin(room.code);
     const b = await WsClient.connect();
     b.send({ type: 'hello', token: joinB.token });
     const joinedB = await b.expectType('joined');
     expect(joinedB.room.status).toBe('active');
-    expect(joinedB.peer).toEqual({ nickname: '小明' });
+    expect(joinedB.peer).toEqual({ nickname: null });
     const peerJoined = await a.expectType('peer-joined');
-    expect(peerJoined.peer).toEqual({ nickname: '小红' });
+    expect(peerJoined.peer).toEqual({ nickname: null });
 
     // 心跳
     a.send({ type: 'ping' });
@@ -127,7 +127,7 @@ describe('WS 端到端（双客户端）', () => {
     // 文本
     a.send({ type: 'text', id: 'm1', content: '你好，世界' });
     const text = await b.expectType('text');
-    expect(text).toMatchObject({ id: 'm1', content: '你好，世界', from: { nickname: '小明' } });
+    expect(text).toMatchObject({ id: 'm1', content: '你好，世界', from: { nickname: null } });
 
     // 信令透传
     a.send({ type: 'signal', payload: { kind: 'offer', sdp: 'v=0 fake' } });
@@ -138,7 +138,7 @@ describe('WS 端到端（双客户端）', () => {
     const meta = { fileId: 'file-e2e', name: '你好.txt', size: 11, mime: 'text/plain' };
     a.send({ type: 'file-offer', file: meta, channel: 'relay' });
     const offer = await b.expectType('file-offer');
-    expect(offer).toMatchObject({ file: meta, channel: 'relay', from: { nickname: '小明' } });
+    expect(offer).toMatchObject({ file: meta, channel: 'relay', from: { nickname: null } });
 
     const upload = async (query: string, body: string) => {
       const res = await fetch(`${base}/relay/rooms/${room.code}/files?${query}`, {
@@ -193,7 +193,7 @@ describe('WS 端到端（双客户端）', () => {
   });
 
   test('对方未在线：文本收到 PEER_OFFLINE', async () => {
-    const room = await restCreate('独');
+    const room = await restCreate();
     const a = await WsClient.connect();
     a.send({ type: 'hello', token: room.token });
     await a.expectType('joined');
@@ -204,8 +204,8 @@ describe('WS 端到端（双客户端）', () => {
   });
 
   test('断线重连：peer-left → 重新 hello → peer-joined；补发错过的 relay-notify', async () => {
-    const room = await restCreate('甲');
-    const joinB = await restJoin(room.code, '乙');
+    const room = await restCreate();
+    const joinB = await restJoin(room.code);
     const a = await WsClient.connect();
     a.send({ type: 'hello', token: room.token });
     await a.expectType('joined');
@@ -253,7 +253,7 @@ describe('WS 端到端（双客户端）', () => {
   }, 15_000);
 
   test('连续非法消息超限后连接被关闭', async () => {
-    const room = await restCreate('丙');
+    const room = await restCreate();
     const a = await WsClient.connect();
     a.send({ type: 'hello', token: room.token });
     await a.expectType('joined');

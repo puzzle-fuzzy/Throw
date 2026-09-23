@@ -20,8 +20,6 @@ import { useTheme } from '../theme';
 export function HomePage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const nickname = useSession((state) => state.nickname);
-  const setNickname = useSession((state) => state.setNickname);
   const setRoom = useSession((state) => state.setRoom);
   const { theme, toggle } = useTheme();
   const [code, setCode] = useState(() => normalizeRoomCode(searchParams.get('code') ?? ''));
@@ -41,7 +39,7 @@ export function HomePage() {
     if (creating) return;
     setCreating(true);
     try {
-      const room = await createRoom(nickname);
+      const room = await createRoom();
       setRoom({ code: room.code, token: room.token, role: 'creator' });
       navigate(`/r/${room.code}`);
     } catch (error) {
@@ -56,7 +54,7 @@ export function HomePage() {
     setJoining(true);
     setJoinError(null);
     try {
-      const room = await joinRoom(code, nickname);
+      const room = await joinRoom(code);
       setRoom({ code, token: room.token, role: 'joiner' });
       navigate(`/r/${code}`);
     } catch (error) {
@@ -89,15 +87,6 @@ export function HomePage() {
 
       <Card className="p-0">
         <Card.Content className="flex flex-col gap-4 p-6">
-          <TextField
-            value={nickname ?? ''}
-            onChange={(value) => setNickname(value.trim() === '' ? null : value.trim())}
-            maxLength={32}
-          >
-            <Label>昵称（可选）</Label>
-            <Input placeholder="游客" />
-          </TextField>
-
           <Button
             variant="primary"
             size="lg"

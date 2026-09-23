@@ -13,11 +13,11 @@ async function call(path: string, init?: RequestInit): Promise<Response> {
   return app.handle(new Request(`http://localhost${path}`, init));
 }
 
-async function createRoom(nickname?: string): Promise<CreateRoomOk> {
+async function createRoom(): Promise<CreateRoomOk> {
   const res = await call('/rooms', {
     method: 'POST',
     headers: { 'content-type': 'application/json', origin: 'http://localhost:5173' },
-    body: JSON.stringify(nickname === undefined ? {} : { nickname }),
+    body: '{}',
   });
   expect(res.status).toBe(200);
   return (await res.json()) as CreateRoomOk;
@@ -32,7 +32,7 @@ describe('REST 基础', () => {
   });
 
   test('创建 → 状态查询 waiting → 加入 → active → 满员', async () => {
-    const created = await createRoom('小明');
+    const created = await createRoom();
     expect(created.code).toMatch(/^[0-9A-HJKMNP-TV-Z]{6}$/);
     expect(typeof created.token).toBe('string');
     expect(created.expiresAt).toBeGreaterThan(Date.now());
@@ -43,7 +43,7 @@ describe('REST 基础', () => {
     const join = await call(`/rooms/${created.code}/join`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ nickname: '小红' }),
+      body: '{}',
     });
     expect(join.status).toBe(200);
     const joinBody = (await join.json()) as { token: string };
@@ -78,7 +78,7 @@ describe('REST 基础', () => {
     const res = await call('/rooms', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ nickname: 123 }),
+      body: 'not-json',
     });
     expect(res.status).toBe(400);
     expect(((await res.json()) as { error: { code: string } }).error.code).toBe('INVALID_REQUEST');
@@ -171,7 +171,7 @@ describe('REST 中转', () => {
     expect(unsat.headers.get('content-range')).toBe('bytes */11');
 
     // 无关成员（另一房间的 token）拒绝
-    const stranger = await createRoom('路人');
+    const stranger = await createRoom();
     const forbidden = await call(`/relay/files/${fileId}`, {
       headers: { authorization: `Bearer ${stranger.token}` },
     });

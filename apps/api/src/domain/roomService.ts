@@ -54,7 +54,7 @@ export class RoomService {
 
   constructor(private deps: RoomServiceDeps) {}
 
-  createRoom(nickname: string | null): { code: string; token: string; expiresAt: number } {
+  createRoom(): { code: string; token: string; expiresAt: number } {
     const now = this.deps.now();
     let code = this.deps.generateCode();
     for (let guard = 0; this.rooms.has(code); guard++) {
@@ -71,7 +71,7 @@ export class RoomService {
       members: [
         {
           token,
-          nickname,
+          nickname: null,
           role: 'creator',
           ws: null,
           lastSeenAt: now,
@@ -85,7 +85,7 @@ export class RoomService {
     return { code, token, expiresAt: this.expiresAtOf(room) };
   }
 
-  joinRoom(code: string, nickname: string | null): { token: string; expiresAt: number } {
+  joinRoom(code: string): { token: string; expiresAt: number } {
     const room = this.rooms.get(code);
     if (!room || room.state === 'closed') throw errors.roomClosed();
     if (room.state === 'active' || room.members.length >= 2) throw errors.roomFull();
@@ -93,7 +93,7 @@ export class RoomService {
     const token = this.deps.generateToken();
     const member: Member = {
       token,
-      nickname,
+      nickname: null,
       role: 'joiner',
       ws: null,
       lastSeenAt: now,

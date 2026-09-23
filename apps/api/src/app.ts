@@ -49,7 +49,7 @@ export function buildApp(deps: AppDeps) {
         set.status = error.status;
         return { error: { code: error.code, message: error.message } };
       }
-      if (code === 'VALIDATION') {
+      if (code === 'VALIDATION' || code === 'PARSE') {
         set.status = 400;
         return { error: { code: 'INVALID_REQUEST', message: '请求参数非法' } };
       }

@@ -6,8 +6,6 @@ export const LIMITS = {
   MAX_BATCH_FILES: 10,
   /** 文本消息长度上限（字符） */
   MAX_TEXT_CHARS: 8000,
-  /** 昵称长度上限 */
-  MAX_NICKNAME_CHARS: 32,
   /** 文件名长度上限 */
   MAX_FILE_NAME_CHARS: 255,
   /** MIME 类型串长度上限 */

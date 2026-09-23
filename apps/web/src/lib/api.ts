@@ -37,9 +37,9 @@ function unwrap<T>(result: { data: T | null; error: object | null }, fallback: s
   return result.data;
 }
 
-export async function createRoom(nickname: string | null): Promise<RoomCredentials> {
+export async function createRoom(): Promise<RoomCredentials> {
   if (!api) throw new ApiError('INTERNAL', '浏览器环境不可用', 500);
-  return unwrap(await api.rooms.post({ nickname: nickname ?? undefined }), '创建房间失败');
+  return unwrap(await api.rooms.post({}), '创建房间失败');
 }
 
 export type RoomStatusValue = 'waiting' | 'active' | 'closed';
@@ -49,12 +49,9 @@ export async function getRoomStatus(code: string): Promise<RoomStatusValue> {
   return unwrap(await api.rooms({ code }).get(), '查询房间失败').status;
 }
 
-export async function joinRoom(code: string, nickname: string | null): Promise<RoomCredentials> {
+export async function joinRoom(code: string): Promise<RoomCredentials> {
   if (!api) throw new ApiError('INTERNAL', '浏览器环境不可用', 500);
-  const data = unwrap(
-    await api.rooms({ code }).join.post({ nickname: nickname ?? undefined }),
-    '加入房间失败',
-  );
+  const data = unwrap(await api.rooms({ code }).join.post({}), '加入房间失败');
   return { code, token: data.token, expiresAt: data.expiresAt };
 }
 

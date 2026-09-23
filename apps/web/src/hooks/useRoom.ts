@@ -91,7 +91,7 @@ export function useRoomConnection(session: RoomSession): UseRoomConnectionResult
           store.setPhase('connected');
           // 房间转入 active：空闲倒计时从 30 分钟起算（等待期的 2 小时语义失效）
           store.setExpiresAt(Date.now() + LIMITS.TRANSFER_IDLE_EXPIRE_MS);
-          chat.addSystem(`${msg.peer.nickname ?? '游客'} 已加入房间`);
+          chat.addSystem('对方 已加入房间');
           return;
         case 'peer-left':
           store.setPhase('peer-left');

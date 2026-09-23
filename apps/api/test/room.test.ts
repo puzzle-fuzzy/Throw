@@ -47,22 +47,21 @@ function makeService() {
 describe('RoomService 状态机', () => {
   test('创建 → waiting，创建者持有 token', () => {
     const { service } = makeService();
-    const created = service.createRoom('小明');
+    const created = service.createRoom();
     expect(created.code).toBe('AAAAAA');
     expect(service.statusOf(created.code)).toBe('waiting');
     const found = service.findByToken(created.token);
     expect(found?.member.role).toBe('creator');
-    expect(found?.member.nickname).toBe('小明');
   });
 
   test('join → active；第三人被拒', () => {
     const { service } = makeService();
-    const created = service.createRoom(null);
-    service.joinRoom(created.code, '小红');
+    const created = service.createRoom();
+    service.joinRoom(created.code);
     expect(service.statusOf(created.code)).toBe('active');
-    expect(() => service.joinRoom(created.code, '第三者')).toThrowError(AppError);
+    expect(() => service.joinRoom(created.code)).toThrowError(AppError);
     try {
-      service.joinRoom(created.code, '第三者');
+      service.joinRoom(created.code);
     } catch (error) {
       expect((error as AppError).code).toBe('ROOM_FULL');
     }
@@ -71,7 +70,7 @@ describe('RoomService 状态机', () => {
   test('join 不存在的房间 → ROOM_CLOSED', () => {
     const { service } = makeService();
     try {
-      service.joinRoom('ZZZZZZ', 'x');
+      service.joinRoom('ZZZZZZ');
       expect.unreachable();
     } catch (error) {
       expect((error as AppError).code).toBe('ROOM_CLOSED');
@@ -80,8 +79,8 @@ describe('RoomService 状态机', () => {
 
   test('attach/detach/重连：宽限期内恢复身份', () => {
     const { service, advance } = makeService();
-    const created = service.createRoom(null);
-    const joined = service.joinRoom(created.code, null);
+    const created = service.createRoom();
+    const joined = service.joinRoom(created.code);
     const wsA = fakeWs();
     const wsB = fakeWs();
     expect(service.attach(created.token, wsA)).not.toBeNull();
@@ -96,7 +95,7 @@ describe('RoomService 状态机', () => {
 
   test('同 token 重复 attach 替换旧连接', () => {
     const { service } = makeService();
-    const created = service.createRoom(null);
+    const created = service.createRoom();
     const wsOld = fakeWs();
     service.attach(created.token, wsOld);
     const wsNew = fakeWs();
@@ -108,8 +107,8 @@ describe('RoomService 状态机', () => {
 
   test('leave：房间销毁，token 失效，触发清理回调', () => {
     const { service, destroyed } = makeService();
-    const created = service.createRoom(null);
-    service.joinRoom(created.code, null);
+    const created = service.createRoom();
+    service.joinRoom(created.code);
     service.leave(created.token);
     expect(service.statusOf(created.code)).toBe('closed');
     expect(service.findByToken(created.token)).toBeNull();
@@ -118,7 +117,7 @@ describe('RoomService 状态机', () => {
 
   test('sweep：未 hello 的占位成员超 JOIN_GRACE 后房间销毁', () => {
     const { service, advance, destroyed } = makeService();
-    const created = service.createRoom(null);
+    const created = service.createRoom();
     advance(LIMITS.JOIN_GRACE_MS + 1);
     service.sweep();
     expect(destroyed).toContain(created.code);
@@ -127,8 +126,8 @@ describe('RoomService 状态机', () => {
 
   test('sweep：断线超宽限 → 成员移除；双方移除 → 房间销毁', () => {
     const { service, advance, destroyed } = makeService();
-    const created = service.createRoom(null);
-    const joined = service.joinRoom(created.code, null);
+    const created = service.createRoom();
+    const joined = service.joinRoom(created.code);
     service.attach(created.token, fakeWs());
     const wsB = fakeWs();
     service.attach(joined.token, wsB);
@@ -141,7 +140,7 @@ describe('RoomService 状态机', () => {
 
   test('sweep：心跳超时连接被关闭', () => {
     const { service, advance } = makeService();
-    const created = service.createRoom(null);
+    const created = service.createRoom();
     const ws = fakeWs();
     service.attach(created.token, ws);
     advance(LIMITS.HEARTBEAT_TIMEOUT_MS + 1);
@@ -151,14 +150,14 @@ describe('RoomService 状态机', () => {
 
   test('sweep：waiting 超时销毁；绝对寿命封顶', () => {
     const { service, advance, destroyed } = makeService();
-    const waiting = service.createRoom(null);
+    const waiting = service.createRoom();
     service.attach(waiting.token, fakeWs());
     advance(LIMITS.WAITING_EXPIRE_MS + 1);
     service.sweep();
     expect(destroyed).toContain(waiting.code);
 
-    const other = service.createRoom(null);
-    const joined = service.joinRoom(other.code, null);
+    const other = service.createRoom();
+    const joined = service.joinRoom(other.code);
     service.attach(other.token, fakeWs());
     service.attach(joined.token, fakeWs());
     advance(LIMITS.ROOM_ABSOLUTE_MAX_AGE_MS + 1);
@@ -168,8 +167,8 @@ describe('RoomService 状态机', () => {
 
   test('传输空闲 30 分钟销毁，传输活动续期', () => {
     const { service, advance, destroyed } = makeService();
-    const created = service.createRoom(null);
-    const joined = service.joinRoom(created.code, null);
+    const created = service.createRoom();
+    const joined = service.joinRoom(created.code);
     service.attach(created.token, fakeWs());
     service.attach(joined.token, fakeWs());
 
@@ -179,8 +178,8 @@ describe('RoomService 状态机', () => {
     expect(destroyed).toContain(created.code);
 
     // 有传输活动：空闲计时从最后一次活动重新起算
-    const room2 = service.createRoom(null);
-    const join2 = service.joinRoom(room2.code, null);
+    const room2 = service.createRoom();
+    const join2 = service.joinRoom(room2.code);
     service.attach(room2.token, fakeWs());
     service.attach(join2.token, fakeWs());
     advance(20 * 60_000);
@@ -196,11 +195,11 @@ describe('RoomService 状态机', () => {
 
   test('expiresAt：waiting 用 2h；active 锚定最后一次传输活动并受绝对寿命约束', () => {
     const { service, advance } = makeService();
-    const created = service.createRoom(null);
+    const created = service.createRoom();
     const base = service.expiresAtOf(service.getRoom(created.code)!);
     expect(base - (base - LIMITS.WAITING_EXPIRE_MS)).toBe(LIMITS.WAITING_EXPIRE_MS);
 
-    const joined = service.joinRoom(created.code, null);
+    const joined = service.joinRoom(created.code);
     advance(10 * 60_000);
     const roomObj = service.getRoom(created.code)!;
     const idleAnchor = service.expiresAtOf(roomObj);

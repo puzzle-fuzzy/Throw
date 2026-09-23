@@ -60,9 +60,3 @@ export function clientIp(request: Request, server: IpLookup | null): string {
 export function codeHash(code: string): string {
   return createHash('sha256').update(code).digest('hex').slice(0, 8);
 }
-
-/** 昵称归一：去空白，空串视为未填写 */
-export function normalizeNickname(input: string | undefined | null): string | null {
-  const trimmed = input?.trim() ?? '';
-  return trimmed === '' ? null : trimmed;
-}
