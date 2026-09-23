@@ -4,6 +4,7 @@ import { buildApp } from './app';
 import { loadConfig } from './config';
 import { RateLimiter } from './domain/rateLimiter';
 import { RoomService } from './domain/roomService';
+import { codeHash } from './http';
 import { createLogger } from './log';
 import { RelayService } from './services/relayService';
 import { DiskRelayStorage } from './services/relayStorage';
@@ -21,12 +22,16 @@ async function main(): Promise<void> {
     now: () => Date.now(),
     generateCode: () => generateRoomCode(getRandomValues(new Uint8Array(6))),
     generateToken: () => randomUUID().replaceAll('-', ''),
-    onRoomDestroyed: (code) => (relay ? relay.deleteRoomFiles(code) : Promise.resolve()),
+    onRoomDestroyed: async (code, reason, ageMs) => {
+      logger.info({ event: 'room.close', room: codeHash(code), reason, ageMs }, '房间销毁');
+      await relay?.deleteRoomFiles(code);
+    },
   });
   relay = new RelayService({
     storage,
     now: () => Date.now(),
     notifyRoom: (code, msg) => rooms.broadcastCode(code, msg),
+    logger,
   });
   const limiter = new RateLimiter();
   const hub = new WsHub({ rooms, relay, logger });

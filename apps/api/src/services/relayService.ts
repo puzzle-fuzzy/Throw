@@ -1,5 +1,6 @@
 import { type FileMeta, LIMITS, type ServerMessage } from '@throw/contracts';
 import { errors } from '../domain/errors';
+import type { Logger } from '../log';
 import type { RelayStorage } from './relayStorage';
 
 interface RelayFile {
@@ -15,6 +16,8 @@ export interface RelayServiceDeps {
   now: () => number;
   notifyRoom: (code: string, msg: ServerMessage) => void;
   limits?: typeof LIMITS;
+  /** 可选：只记录元数据（fileId/字节数/时长/原因），不记录文件名与内容 */
+  logger?: Logger;
 }
 
 export type OpenedDownload =
@@ -92,6 +95,10 @@ export class RelayService {
       createdAt: this.deps.now(),
     });
     this.fileRoom.set(meta.fileId, code);
+    this.deps.logger?.info(
+      { event: 'relay.offer', file: meta.fileId, bytes: meta.size },
+      '中转文件注册',
+    );
   }
 
   async putChunk(
@@ -131,6 +138,15 @@ export class RelayService {
     }
     file.ready = true;
     if (this.activeUpload.get(code) === fileId) this.activeUpload.delete(code);
+    this.deps.logger?.info(
+      {
+        event: 'relay.upload.complete',
+        file: fileId,
+        bytes: file.meta.size,
+        durationMs: this.deps.now() - file.createdAt,
+      },
+      '中转上传完成',
+    );
     this.deps.notifyRoom(code, { type: 'relay-notify', file: file.meta });
     return file.meta;
   }
@@ -163,13 +179,23 @@ export class RelayService {
     const file = code !== undefined ? this.rooms.get(code)?.get(fileId) : undefined;
     if (!code || !file) return { senderToken: null };
     await this.forget(code, fileId);
+    this.deps.logger?.info(
+      { event: 'relay.download.complete', file: fileId, bytes: file.meta.size },
+      '中转下载完成即删',
+    );
     return { senderToken: file.senderToken };
   }
 
   /** 任一方取消：删除；返回是否存在 */
   async cancel(code: string, fileId: string): Promise<boolean> {
     const existed = this.rooms.get(code)?.has(fileId) ?? false;
-    if (existed) await this.forget(code, fileId);
+    if (existed) {
+      await this.forget(code, fileId);
+      this.deps.logger?.info(
+        { event: 'relay.delete', file: fileId, reason: 'cancel' },
+        '中转文件取消',
+      );
+    }
     return existed;
   }
 

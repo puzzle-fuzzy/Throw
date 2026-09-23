@@ -32,8 +32,12 @@ export interface RoomServiceDeps {
   now: () => number;
   generateCode: () => string;
   generateToken: () => string;
-  /** 房间销毁回调（清理中转文件等） */
-  onRoomDestroyed: (code: string, reason: 'manual' | 'expired') => void | Promise<void>;
+  /** 房间销毁回调（清理中转文件等）；ageMs 为房间存活时长 */
+  onRoomDestroyed: (
+    code: string,
+    reason: 'manual' | 'expired',
+    ageMs: number,
+  ) => void | Promise<void>;
 }
 
 /**
@@ -167,7 +171,7 @@ export class RoomService {
       this.byToken.delete(member.token);
     }
     this.rooms.delete(code);
-    void this.deps.onRoomDestroyed(code, reason);
+    void this.deps.onRoomDestroyed(code, reason, this.deps.now() - room.createdAt);
   }
 
   sendTo(member: Member, msg: ServerMessage): boolean {

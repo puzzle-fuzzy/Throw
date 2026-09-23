@@ -6,6 +6,7 @@ import {
   type ServerMessage,
 } from '@throw/contracts';
 import type { Member, RoomService } from '../domain/roomService';
+import { codeHash } from '../http';
 import type { Logger } from '../log';
 import type { RelayService } from '../services/relayService';
 
@@ -103,8 +104,19 @@ export class WsHub {
     const found = this.deps.rooms.findByToken(auth.token);
     if (!found) return;
     const { room, member } = found;
-    if (!member.ws || member.ws.id !== ws.id) return; // 已被新连接替换或事件乱序
+    if (!member.ws) return; // 已被新连接替换或事件乱序
+    if (member.ws.id !== ws.id) {
+      this.deps.logger.info(
+        { event: 'ws.replaced', room: codeHash(room.code) },
+        '旧连接被替换关闭',
+      );
+      return;
+    }
     this.deps.rooms.detach(member);
+    this.deps.logger.info(
+      { event: 'ws.close', room: codeHash(room.code), role: member.role },
+      'WS 成员断线（进入宽限）',
+    );
     const peer = this.deps.rooms.peerOf(room, member);
     if (peer) {
       this.deps.rooms.sendTo(peer, { type: 'peer-left', reason: 'disconnect' });
@@ -118,11 +130,16 @@ export class WsHub {
     }
     const found = this.deps.rooms.attach(token, ws);
     if (!found) {
+      this.deps.logger.warn({ event: 'ws.hello.denied' }, 'WS hello 被拒绝');
       ws.send(errorJson('UNAUTHORIZED', 'token 无效或房间已关闭'));
       ws.close(4001, 'unauthorized');
       return;
     }
     const { room, member } = found;
+    this.deps.logger.info(
+      { event: 'ws.hello', room: codeHash(room.code), role: member.role },
+      'WS 成员上线',
+    );
     ws.data.auth = { code: room.code, token: member.token };
     const peer = this.deps.rooms.peerOf(room, member);
     ws.send(
@@ -219,6 +236,10 @@ export class WsHub {
 
   private invalid(ws: HubSocket, message: string): void {
     ws.data.invalidCount += 1;
+    this.deps.logger.warn(
+      { event: 'ws.invalid', count: ws.data.invalidCount },
+      `非法 WS 消息：${message}`,
+    );
     if (ws.data.invalidCount > LIMITS.MAX_INVALID_MESSAGES) {
       ws.close(4003, 'too many invalid messages');
       return;
