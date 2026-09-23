@@ -90,6 +90,7 @@ export function HomePage() {
           <Button
             variant="primary"
             size="lg"
+            fullWidth
             isDisabled={creating}
             onPress={() => void handleCreate()}
           >
@@ -125,6 +126,7 @@ export function HomePage() {
             {joinError && <p className="text-center text-sm text-danger">{joinError}</p>}
             <Button
               variant="outline"
+              fullWidth
               isDisabled={!codeValid || joining}
               onPress={() => void handleJoin()}
             >

@@ -24,7 +24,7 @@ export function FileCard({ transfer, onCancel, onRetry, onDownload }: FileCardPr
     transfer.sentBytes >= transfer.size;
 
   return (
-    <Card className="w-full max-w-[420px] p-0">
+    <Card className="w-full p-0">
       <Card.Content className="flex flex-col gap-2 p-3">
         <div className="flex items-start gap-2.5">
           <div className="mt-0.5 shrink-0 rounded-lg bg-default p-2 text-foreground">
