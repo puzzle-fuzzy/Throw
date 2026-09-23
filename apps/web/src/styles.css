@@ -24,3 +24,15 @@ body {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* 首页房间码六格：均分占满内容宽度，与通栏按钮对齐 */
+.input-otp {
+  width: 100%;
+}
+.input-otp > div {
+  width: 100%;
+  justify-content: space-between;
+}
+.input-otp__slot {
+  flex: 1;
+}
