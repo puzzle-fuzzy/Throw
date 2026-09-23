@@ -57,3 +57,6 @@ async function main(): Promise<void> {
 if (import.meta.main) {
   void main();
 }
+
+/** Eden treaty 类型源：apps/web 以 `import type { App } from '@throw/api'` 消费（纯类型，无运行时引入） */
+export type App = ReturnType<typeof buildApp>;
