@@ -55,18 +55,22 @@ export function MessageList({ onCancel, onRetry, onDownload, peerSeed }: Message
               return (
                 <div
                   key={item.key}
-                  className={`flex items-end gap-2 ${item.mine ? 'flex-row-reverse self-end' : 'self-start'}`}
+                  className={`flex items-start gap-2.5 ${item.mine ? 'flex-row-reverse self-end' : 'self-start'}`}
                 >
                   {!item.mine && (
-                    <Identicon seed={peerSeed} size={28} className="bg-default p-0.5" />
+                    <Identicon
+                      seed={peerSeed}
+                      size={32}
+                      className="mt-0.5 shrink-0 border border-separator bg-background"
+                    />
                   )}
                   <div
-                    className={`max-w-[85%] rounded-2xl px-3.5 py-2 text-sm leading-relaxed break-words whitespace-pre-wrap sm:max-w-[72%] ${
+                    className={`max-w-[85%] rounded-[20px] px-3.5 py-2 text-sm leading-relaxed break-words whitespace-pre-wrap sm:max-w-[70%] ${
                       item.mine ? 'bg-accent text-accent-foreground' : 'bg-default text-foreground'
                     }`}
                   >
                     {item.text}
-                    <span className="mx-1.5 align-bottom text-[10px] opacity-60">
+                    <span className="ms-1.5 align-bottom text-[10px] opacity-55">
                       {formatClock(item.at)}
                     </span>
                   </div>
@@ -78,14 +82,23 @@ export function MessageList({ onCancel, onRetry, onDownload, peerSeed }: Message
             return (
               <div
                 key={item.key}
-                className={`max-w-full sm:max-w-[72%] ${item.mine ? 'self-end' : 'self-start'}`}
+                className={`flex items-start gap-2.5 ${item.mine ? 'flex-row-reverse self-end' : 'self-start'}`}
               >
-                <FileCard
-                  transfer={transfer}
-                  onCancel={onCancel}
-                  onRetry={onRetry}
-                  onDownload={(t) => onDownload(t)}
-                />
+                {!item.mine && (
+                  <Identicon
+                    seed={peerSeed}
+                    size={32}
+                    className="mt-0.5 shrink-0 border border-separator bg-background"
+                  />
+                )}
+                <div className="min-w-0 max-w-full flex-1 sm:max-w-[420px]">
+                  <FileCard
+                    transfer={transfer}
+                    onCancel={onCancel}
+                    onRetry={onRetry}
+                    onDownload={(t) => onDownload(t)}
+                  />
+                </div>
               </div>
             );
           })}

@@ -1,5 +1,5 @@
 import { AlertDialog, Button, Chip, Dropdown, Tooltip, toast } from '@heroui/react';
-import { Copy, Link2, LogOut, MoonStar, MoreHorizontal, Timer } from 'lucide-react';
+import { Copy, Link2, LogOut, MoonStar, MoreHorizontal, Send, Timer } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { formatCountdown } from '../lib/format';
 import { useRoom } from '../stores/room';
@@ -32,12 +32,23 @@ export function RoomHeader({ code, onLeave, onToggleTheme }: RoomHeaderProps) {
   };
 
   return (
-    <header className="relative flex items-center gap-2 border-b border-separator px-4 py-2.5">
+    <header className="relative flex items-center gap-2 border-b border-separator px-4 py-2">
       <Tooltip>
         <Tooltip.Trigger>
-          <Button variant="ghost" size="sm" onPress={() => void copyCode()} aria-label="复制房间码">
+          <Button
+            variant="ghost"
+            onPress={() => void copyCode()}
+            aria-label="复制房间码"
+            className="gap-2.5 rounded-xl px-1.5 py-1"
+          >
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-accent text-accent-foreground">
+              <Send className="size-4" />
+            </span>
+            <span className="flex flex-col items-start leading-tight">
+              <span className="text-[11px] text-muted">临时房间</span>
+              <span className="font-mono text-base font-bold tracking-[0.18em]">{code}</span>
+            </span>
             <Copy className="size-3.5 text-muted" />
-            <span className="font-mono text-sm font-semibold tracking-widest">{code}</span>
           </Button>
         </Tooltip.Trigger>
         <Tooltip.Content>
