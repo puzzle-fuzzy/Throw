@@ -32,7 +32,7 @@ export function RoomHeader({ code, onLeave, onToggleTheme }: RoomHeaderProps) {
   };
 
   return (
-    <header className="relative flex items-center gap-1.5 border-b border-separator px-3 py-2">
+    <header className="relative flex items-center gap-2 border-b border-separator px-4 py-2.5">
       <Tooltip>
         <Tooltip.Trigger>
           <Button variant="ghost" size="sm" onPress={() => void copyCode()} aria-label="复制房间码">

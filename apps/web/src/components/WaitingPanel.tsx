@@ -34,7 +34,7 @@ export function WaitingPanel({ code, expiresAt }: WaitingPanelProps) {
             type="button"
             onClick={() => void copyCode()}
             aria-label="复制房间码"
-            className="rounded-xl px-4 py-2 font-mono text-3xl font-bold tracking-[0.3em] transition-colors hover:bg-default"
+            className="rounded-xl px-4 py-2 pl-[1.3em] font-mono text-3xl font-bold tracking-[0.3em] transition-colors hover:bg-default"
           >
             {code}
           </button>

@@ -61,7 +61,7 @@ export function MessageList({ onCancel, onRetry, onDownload, peerSeed }: Message
                     <Identicon seed={peerSeed} size={28} className="bg-default p-0.5" />
                   )}
                   <div
-                    className={`max-w-[78%] rounded-2xl px-3.5 py-2 text-sm leading-relaxed break-words whitespace-pre-wrap ${
+                    className={`max-w-[85%] rounded-2xl px-3.5 py-2 text-sm leading-relaxed break-words whitespace-pre-wrap sm:max-w-[72%] ${
                       item.mine ? 'bg-accent text-accent-foreground' : 'bg-default text-foreground'
                     }`}
                   >
@@ -76,7 +76,10 @@ export function MessageList({ onCancel, onRetry, onDownload, peerSeed }: Message
             const transfer = item.fileId ? transfers[item.fileId] : undefined;
             if (!transfer) return null;
             return (
-              <div key={item.key} className={item.mine ? 'self-end' : 'self-start'}>
+              <div
+                key={item.key}
+                className={`max-w-full sm:max-w-[72%] ${item.mine ? 'self-end' : 'self-start'}`}
+              >
                 <FileCard
                   transfer={transfer}
                   onCancel={onCancel}

@@ -21,7 +21,7 @@ export function HomePage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const setRoom = useSession((state) => state.setRoom);
-  const { theme, toggle } = useTheme();
+  const { toggle } = useTheme();
   const [code, setCode] = useState(() => normalizeRoomCode(searchParams.get('code') ?? ''));
   const [creating, setCreating] = useState(false);
   const [joining, setJoining] = useState(false);
@@ -66,20 +66,20 @@ export function HomePage() {
   };
 
   return (
-    <main className="relative flex min-h-dvh flex-col justify-center px-4 py-10">
+    <main className="relative mx-auto flex min-h-dvh w-full max-w-sm flex-col justify-center px-4 py-10">
       <Button
         variant="ghost"
         isIconOnly
         aria-label="切换亮暗主题"
-        className="absolute end-4 top-4"
+        className="fixed end-4 top-4"
         onPress={toggle}
       >
         <MoonStar className="size-5" />
       </Button>
 
       <div className="mb-8 text-center">
-        <div className="mx-auto mb-3 flex size-14 items-center justify-center rounded-2xl bg-accent text-accent-foreground">
-          <Send className="size-7" />
+        <div className="mx-auto mb-3 flex size-16 items-center justify-center rounded-2xl bg-accent text-accent-foreground">
+          <Send className="size-8" />
         </div>
         <h1 className="text-2xl font-bold tracking-tight">Throw</h1>
         <p className="mt-1 text-sm text-muted">临时一对一传输房间 · 用完即走</p>
@@ -105,7 +105,7 @@ export function HomePage() {
           </div>
 
           <div className="flex flex-col gap-2">
-            <span className="text-sm font-medium">房间码</span>
+            <span className="text-center text-sm font-medium">房间码</span>
             <div className="flex justify-center">
               <InputOTP
                 maxLength={6}
@@ -139,8 +139,7 @@ export function HomePage() {
 
       <p className="mt-6 flex items-center justify-center gap-1.5 text-center text-xs text-muted">
         <Info className="size-3.5" />
-        一对一 · 临时会话 · 文件优先点对点直传，不落云端（主题：{theme === 'dark' ? '深色' : '浅色'}
-        ）
+        一对一 · 临时会话 · 文件优先点对点直传，不落云端
       </p>
     </main>
   );
