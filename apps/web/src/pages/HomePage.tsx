@@ -66,7 +66,7 @@ export function HomePage() {
   };
 
   return (
-    <main className="relative mx-auto flex min-h-dvh w-full max-w-sm flex-col justify-center px-4 py-10">
+    <main className="relative mx-auto flex min-h-[calc(100dvh-1rem)] w-full max-w-sm flex-col justify-center px-4 py-10">
       <Button
         variant="ghost"
         isIconOnly

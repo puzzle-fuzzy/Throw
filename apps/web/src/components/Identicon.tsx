@@ -52,11 +52,11 @@ export function Identicon({
       viewBox="-0.1 -0.1 5.2 5.2"
       width={size}
       height={size}
-      className={`shrink-0 rounded-md ${className ?? ''}`}
+      className={`shrink-0 overflow-hidden rounded-full ${className ?? ''}`}
       role="img"
       aria-label="临时头像"
     >
-      <rect x="-0.1" y="-0.1" width="5.2" height="5.2" rx="0.6" fill="var(--background)" />
+      <rect x="-0.1" y="-0.1" width="5.2" height="5.2" fill="var(--background)" />
       <path d={path} fill={`hsl(${hue} 52% 46%)`} />
     </svg>
   );

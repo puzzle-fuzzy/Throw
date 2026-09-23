@@ -1,5 +1,5 @@
-import { ScrollShadow } from '@heroui/react';
-import { ArrowDown } from 'lucide-react';
+import { Button, ScrollShadow, toast } from '@heroui/react';
+import { ArrowDown, Copy } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 import { formatClock } from '../lib/format';
 import { useChat } from '../stores/chat';
@@ -55,7 +55,7 @@ export function MessageList({ onCancel, onRetry, onDownload, peerSeed }: Message
               return (
                 <div
                   key={item.key}
-                  className={`flex items-start gap-2.5 ${item.mine ? 'flex-row-reverse self-end' : 'self-start'}`}
+                  className={`group flex items-start gap-2.5 ${item.mine ? 'flex-row-reverse self-end' : 'self-start'}`}
                 >
                   {!item.mine && (
                     <Identicon
@@ -65,14 +65,28 @@ export function MessageList({ onCancel, onRetry, onDownload, peerSeed }: Message
                     />
                   )}
                   <div
-                    className={`max-w-[85%] rounded-[20px] px-3.5 py-2 text-sm leading-relaxed break-words whitespace-pre-wrap sm:max-w-[70%] ${
+                    className={`max-w-[85%] rounded-[20px] px-3.5 py-2 text-sm leading-relaxed break-words sm:max-w-[70%] ${
                       item.mine ? 'bg-accent text-accent-foreground' : 'bg-default text-foreground'
                     }`}
                   >
-                    {item.text}
-                    <span className="ms-1.5 align-bottom text-[10px] opacity-55">
-                      {formatClock(item.at)}
-                    </span>
+                    <p className="whitespace-pre-wrap">{item.text}</p>
+                    <div className="mt-1 flex items-center justify-end gap-0.5">
+                      <Button
+                        variant="ghost"
+                        isIconOnly
+                        aria-label="复制消息"
+                        className="size-6 min-w-6 rounded-full opacity-0 transition-opacity group-hover:opacity-100"
+                        onPress={() => {
+                          void navigator.clipboard
+                            .writeText(item.text ?? '')
+                            .then(() => toast.success('已复制'))
+                            .catch(() => toast.danger('复制失败'));
+                        }}
+                      >
+                        <Copy className="size-3" />
+                      </Button>
+                      <span className="text-[11px] opacity-55">{formatClock(item.at)}</span>
+                    </div>
                   </div>
                 </div>
               );

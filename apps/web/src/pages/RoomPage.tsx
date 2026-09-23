@@ -146,7 +146,7 @@ export function RoomPage() {
   const inputDisabled = phase !== 'connected' || wsStatus !== 'open';
 
   return (
-    <main className="relative flex h-dvh max-h-dvh flex-col">
+    <main className="relative flex h-[calc(100dvh-1rem)] max-h-[calc(100dvh-1rem)] flex-col">
       <RoomHeader code={code} onLeave={handleLeave} onToggleTheme={toggle} />
 
       {phase === 'connecting' && <ConnectingOverlay />}

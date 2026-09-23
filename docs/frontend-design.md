@@ -151,7 +151,7 @@ closed/expired closed/expired        （重连中）                closed/expir
 
 ### 4.4 消息流与文件卡片
 
-- 文本气泡（IM 风）：对方左对齐（32px 圆形 identicon 头像，顶部对齐，细描边）+ `bg-default` 浅灰气泡；自己右对齐无头像 + `bg-accent`；统一 `rounded-[20px]`；时间戳融入气泡内右下角（弱化小字接排正文）；宽度移动 85% / ≥640px 视口 70%
+- 文本气泡（IM 风）：对方左对齐（32px 圆形 identicon 头像，顶部对齐，细描边）+ `bg-default` 浅灰气泡；自己右对齐无头像 + `bg-accent`；统一 `rounded-[20px]`；头像圆形（`rounded-full` + overflow 裁剪）；正文下方独立时间行（右对齐 11px 弱化色）+ 行内悬停复制钮（ghost 圆形小图标，`group-hover:opacity` 显隐，点击复制正文并 toast）；宽度移动 85% / ≥640px 视口 70%
 - 文件卡片（`Card` + `Card.Content`，信息密度优先）：
   - **元信息**：文件类型 Lucide 图标（图片/视频/音频/压缩包/文档/通用）；文件名单行 truncate + `Tooltip` 全名；人类可读大小；通道 `Chip`（P2P/中转）
   - **图片**：完成后气泡内缩略图（本地 Blob，等比、固定比例容器），点击 `Modal` 放大，提供「下载」
