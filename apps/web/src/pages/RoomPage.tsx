@@ -1,15 +1,14 @@
-import { toast } from '@heroui/react';
-import { normalizeRoomCode } from '@throw/contracts';
+import { Surface, toast } from '@heroui/react';
+import { LIMITS, normalizeRoomCode } from '@throw/contracts';
 import { FileUp } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { InputBar } from '../components/InputBar';
 import { MessageList } from '../components/MessageList';
-import { ConnectingOverlay, EndOverlay } from '../components/Overlays';
+import { ConnectingOverlay, EndOverlay, PeerLeftNotice } from '../components/Overlays';
 import { RoomHeader } from '../components/RoomHeader';
 import { WaitingPanel } from '../components/WaitingPanel';
 import { useRoomConnection } from '../hooks/useRoom';
-import { useChat } from '../stores/chat';
 import { useRoom } from '../stores/room';
 import { useSession } from '../stores/session';
 import { useTheme } from '../theme';
@@ -24,10 +23,11 @@ export function RoomPage() {
   const phase = useRoom((state) => state.phase);
   const closeReason = useRoom((state) => state.closeReason);
   const wsStatus = useRoom((state) => state.wsStatus);
+  const peerLeftAt = useRoom((state) => state.peerLeftAt);
   const expiresAt = useRoom((state) => state.expiresAt);
-  const clearChat = useChat((state) => state.clear);
   const [dragging, setDragging] = useState(false);
   const [redirected, setRedirected] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // 直达链接但没有本会话：回首页预填房间码
   useEffect(() => {
@@ -40,10 +40,12 @@ export function RoomPage() {
   const connection = useRoomConnection(session ?? { code, token: '', role: 'creator' as const });
   // 对方临时头像种子：双方由（房间码, 对方角色）独立算出一致结果
   const peerSeed = `${code}:${session?.role === 'joiner' ? 'creator' : 'joiner'}`;
+  const canTransfer = phase === 'connected' && wsStatus === 'open';
+  const reconnectAt = peerLeftAt === null ? null : peerLeftAt + LIMITS.GRACE_MS;
 
   // beforeunload 守卫：会话进行中离开页面提示（刷新/关闭都会丢会话）
   useEffect(() => {
-    if (phase !== 'waiting' && phase !== 'connected') return;
+    if (phase !== 'waiting' && phase !== 'connected' && phase !== 'peer-left') return;
     const onBeforeUnload = (event: BeforeUnloadEvent) => {
       event.preventDefault();
     };
@@ -62,12 +64,17 @@ export function RoomPage() {
 
   const handlePickFiles = useCallback(
     (files: File[]) => {
+      if (!canTransfer || files.length === 0) return;
       void connection.sendFiles(files).catch((error: unknown) => {
         toast.danger(error instanceof Error ? error.message : '文件发送失败');
       });
     },
-    [connection],
+    [canTransfer, connection],
   );
+
+  const handleOpenFilePicker = useCallback(() => {
+    if (canTransfer) fileInputRef.current?.click();
+  }, [canTransfer]);
 
   // 全页拖拽 + 粘贴截图
   const dragDepth = useRef(0);
@@ -75,6 +82,7 @@ export function RoomPage() {
     const onDragEnter = (event: DragEvent) => {
       if (!event.dataTransfer?.types.includes('Files')) return;
       event.preventDefault();
+      if (!canTransfer) return;
       dragDepth.current += 1;
       setDragging(true);
     };
@@ -91,6 +99,7 @@ export function RoomPage() {
       event.preventDefault();
       dragDepth.current = 0;
       setDragging(false);
+      if (!canTransfer) return;
       handlePickFiles(Array.from(event.dataTransfer.files));
     };
     window.addEventListener('dragenter', onDragEnter);
@@ -103,26 +112,32 @@ export function RoomPage() {
       window.removeEventListener('dragleave', onDragLeave);
       window.removeEventListener('drop', onDrop);
     };
-  }, [handlePickFiles]);
+  }, [canTransfer, handlePickFiles]);
+
+  useEffect(() => {
+    if (canTransfer) return;
+    dragDepth.current = 0;
+    setDragging(false);
+  }, [canTransfer]);
 
   useEffect(() => {
     const onPaste = (event: ClipboardEvent) => {
       const files = Array.from(event.clipboardData?.files ?? []);
       if (files.length > 0) {
         event.preventDefault();
+        if (!canTransfer) return;
         handlePickFiles(files);
       }
     };
     window.addEventListener('paste', onPaste);
     return () => window.removeEventListener('paste', onPaste);
-  }, [handlePickFiles]);
+  }, [canTransfer, handlePickFiles]);
 
-  const handleLeave = useCallback(() => {
+  const exitRoom = useCallback(() => {
     connection.leave();
-    clearChat();
     setSessionRoom(null);
     navigate('/', { replace: true });
-  }, [connection, clearChat, setSessionRoom, navigate]);
+  }, [connection, setSessionRoom, navigate]);
 
   const handleDownload = useCallback((transfer: { blobUrl?: string; name: string }) => {
     if (!transfer.blobUrl) return;
@@ -132,59 +147,64 @@ export function RoomPage() {
     anchor.click();
   }, []);
 
-  const handleRecreate = useCallback(() => {
-    connection.leave();
-    clearChat();
-    setSessionRoom(null);
-    navigate('/', { replace: true });
-  }, [connection, clearChat, setSessionRoom, navigate]);
-
   if (!session) {
     return <ConnectingOverlay />;
   }
 
-  const inputDisabled = phase !== 'connected' || wsStatus !== 'open';
+  const inputDisabled = wsStatus !== 'open';
 
   return (
-    <main className="relative flex h-[calc(100dvh-1rem)] max-h-[calc(100dvh-1rem)] flex-col">
-      <RoomHeader code={code} onLeave={handleLeave} onToggleTheme={toggle} />
+    <Surface
+      role="main"
+      variant="default"
+      className="relative flex h-dvh min-h-0 flex-col overflow-hidden bg-background md:my-4 md:h-[calc(100dvh-2rem)] md:rounded-2xl md:border md:border-separator md:shadow-sm"
+    >
+      <input
+        ref={fileInputRef}
+        type="file"
+        multiple
+        hidden
+        onChange={(event) => {
+          const files = Array.from(event.target.files ?? []);
+          event.target.value = '';
+          handlePickFiles(files);
+        }}
+      />
+      <RoomHeader code={code} onLeave={exitRoom} onToggleTheme={toggle} />
 
       {phase === 'connecting' && <ConnectingOverlay />}
       {phase === 'waiting' && <WaitingPanel code={code} expiresAt={expiresAt} />}
       {(phase === 'connected' || phase === 'peer-left') && (
-        <MessageList
-          onCancel={connection.cancelTransfer}
-          onRetry={connection.retryTransfer}
-          onDownload={handleDownload}
-          peerSeed={peerSeed}
-        />
+        <>
+          {phase === 'peer-left' && <PeerLeftNotice reconnectAt={reconnectAt} />}
+          <MessageList
+            onCancel={connection.cancelTransfer}
+            onRetry={connection.retryTransfer}
+            onDownload={handleDownload}
+            peerSeed={peerSeed}
+            onPickFiles={canTransfer ? handleOpenFilePicker : undefined}
+          />
+        </>
       )}
 
-      {phase !== 'closed' && (
+      {phase === 'connected' && (
         <InputBar
           disabled={inputDisabled}
           onSendText={handleSendText}
-          onPickFiles={handlePickFiles}
+          onOpenFilePicker={handleOpenFilePicker}
         />
       )}
 
-      {(phase === 'peer-left' || phase === 'closed') && (
-        <EndOverlay
-          kind={phase}
-          closeReason={closeReason}
-          onRecreate={handleRecreate}
-          onHome={handleRecreate}
-        />
-      )}
+      {phase === 'closed' && <EndOverlay closeReason={closeReason} onHome={exitRoom} />}
 
       {dragging && (
         <div className="absolute inset-0 z-30 flex items-center justify-center bg-accent/10 backdrop-blur-[2px]">
-          <div className="flex flex-col items-center gap-2 rounded-2xl border-2 border-dashed border-accent px-10 py-8 text-accent">
-            <FileUp className="size-10" />
+          <Surface className="flex flex-col items-center gap-2 rounded-2xl border-2 border-dashed border-accent px-10 py-8 text-accent">
+            <FileUp aria-hidden="true" className="size-10" />
             <p className="text-sm font-medium">松开即发送</p>
-          </div>
+          </Surface>
         </div>
       )}
-    </main>
+    </Surface>
   );
 }

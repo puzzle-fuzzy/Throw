@@ -18,7 +18,7 @@ function makeTransfer(patch: Partial<TransferItem>): TransferItem {
     etaSec: undefined,
     error: undefined,
     blobUrl: undefined,
-    source: undefined,
+    source: new File(['test'], '照片.png', { type: 'image/png' }),
     ...patch,
   };
 }
@@ -52,7 +52,7 @@ describe('FileCard 状态机渲染', () => {
     expect(screen.getByRole('progressbar', { name: '照片.png 传输进度' })).toBeTruthy();
   });
 
-  it('发送方上传完等待对方：显示等待保存文案', () => {
+  it('发送方本端传输完成：等待对方接收确认，不误称等待保存', () => {
     render(
       <FileCard
         transfer={makeTransfer({ status: 'transferring', sentBytes: 10 * 1024 * 1024 })}
@@ -61,7 +61,8 @@ describe('FileCard 状态机渲染', () => {
         onDownload={download}
       />,
     );
-    expect(screen.getByText('已发送 · 等待对方保存')).toBeTruthy();
+    expect(screen.getByText('本端传输已完成，等待对方接收确认')).toBeTruthy();
+    expect(screen.queryByText(/等待对方保存/)).toBeNull();
   });
 
   it('失败：显示原因与换通道重试', async () => {
@@ -81,7 +82,8 @@ describe('FileCard 状态机渲染', () => {
     expect(retry).toHaveBeenCalledWith('f1');
   });
 
-  it('接收方完成：显示下载保存按钮', () => {
+  it('接收方完成：显示下载保存按钮', async () => {
+    const user = userEvent.setup();
     render(
       <FileCard
         transfer={makeTransfer({
@@ -95,7 +97,24 @@ describe('FileCard 状态机渲染', () => {
       />,
     );
     const btn = screen.getByRole('button', { name: /下载保存/ });
-    btn.click();
+    await user.click(btn);
     expect(download).toHaveBeenCalled();
+  });
+
+  it.each([
+    ['queued', '准备发送'],
+    ['offering', '正在建立传输'],
+    ['completed', '对方已确认接收'],
+    ['cancelled', '已取消'],
+  ] as const)('状态 %s：显示 %s', (status, label) => {
+    render(
+      <FileCard
+        transfer={makeTransfer({ status })}
+        onCancel={noop}
+        onRetry={noop}
+        onDownload={download}
+      />,
+    );
+    expect(screen.getByText(label)).toBeTruthy();
   });
 });

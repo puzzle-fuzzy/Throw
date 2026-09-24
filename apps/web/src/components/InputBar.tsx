@@ -1,19 +1,18 @@
-import { Button, TextArea } from '@heroui/react';
+import { Button, Card, Kbd, TextArea, Toolbar } from '@heroui/react';
 import { ArrowUp, Paperclip } from 'lucide-react';
-import { type KeyboardEvent, useRef, useState } from 'react';
+import { type KeyboardEvent, useState } from 'react';
 import { PRECHECK } from '../lib/api';
 
 interface InputBarProps {
   disabled: boolean;
   onSendText: (content: string) => void;
-  onPickFiles: (files: File[]) => void;
+  onOpenFilePicker: () => void;
 }
 
 /** 胶囊输入卡片：上为自适应文本区，下为内嵌工具栏（左附件 / 右发送） */
-export function InputBar({ disabled, onSendText, onPickFiles }: InputBarProps) {
+export function InputBar({ disabled, onSendText, onOpenFilePicker }: InputBarProps) {
   const [value, setValue] = useState('');
   const [composing, setComposing] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const nearLimit = value.length > PRECHECK.MAX_TEXT_CHARS * 0.9;
 
   const submit = () => {
@@ -33,60 +32,69 @@ export function InputBar({ disabled, onSendText, onPickFiles }: InputBarProps) {
 
   return (
     <div className="px-3 pt-1 pb-3">
-      <input
-        ref={fileInputRef}
-        type="file"
-        multiple
-        hidden
-        onChange={(event) => {
-          const files = Array.from(event.target.files ?? []);
-          event.target.value = '';
-          if (files.length > 0) onPickFiles(files);
-        }}
-      />
-      <div className="rounded-[26px] border border-separator bg-background p-2 shadow-sm">
-        <TextArea
-          value={value}
-          onChange={(event) => setValue(event.target.value)}
-          onKeyDown={onKeyDown}
-          onCompositionStart={() => setComposing(true)}
-          onCompositionEnd={() => setComposing(false)}
-          placeholder={disabled ? '连接中断…' : '发送文本或文件…（Enter 发送，Shift+Enter 换行）'}
-          variant="secondary"
-          disabled={disabled}
-          aria-label="消息输入框"
-          rows={1}
-          className="max-h-36! w-full resize-none border-0! bg-transparent! px-3! pt-2.5! pb-1! text-[15px]! leading-6! shadow-none! [field-sizing:content]"
-        />
-        <div className="flex items-center gap-2 pt-1">
-          <Button
+      <Card
+        variant="secondary"
+        className="gap-0 rounded-[26px] border border-separator p-0 shadow-sm"
+      >
+        <Card.Content className="p-2 pb-0">
+          <TextArea
+            value={value}
+            onChange={(event) => setValue(event.target.value)}
+            onKeyDown={onKeyDown}
+            onCompositionStart={() => setComposing(true)}
+            onCompositionEnd={() => setComposing(false)}
+            placeholder={disabled ? '正在恢复连接…' : '发送消息…'}
             variant="secondary"
-            isIconOnly
-            aria-label="发送文件"
-            isDisabled={disabled}
-            onPress={() => fileInputRef.current?.click()}
-            className="rounded-full"
+            disabled={disabled}
+            aria-label="消息输入框"
+            maxLength={PRECHECK.MAX_TEXT_CHARS}
+            rows={1}
+            className="max-h-36 w-full resize-none text-[15px] leading-6 [field-sizing:content]"
+          />
+        </Card.Content>
+        <Card.Footer className="px-2 pb-2 pt-1">
+          <Toolbar
+            aria-label="消息操作"
+            className="w-full justify-between gap-2 bg-transparent p-0"
           >
-            <Paperclip className="size-5" />
-          </Button>
-          {nearLimit && (
-            <p className="flex-1 text-center text-xs text-warning">
-              {value.length}/{PRECHECK.MAX_TEXT_CHARS}
-            </p>
-          )}
-          <span className={nearLimit ? 'hidden' : 'flex-1'} />
-          <Button
-            variant="primary"
-            isIconOnly
-            aria-label="发送"
-            isDisabled={disabled || value.trim() === '' || value.length > PRECHECK.MAX_TEXT_CHARS}
-            onPress={submit}
-            className="rounded-full"
-          >
-            <ArrowUp className="size-5" />
-          </Button>
-        </div>
-      </div>
+            <Button
+              variant="secondary"
+              isIconOnly
+              aria-label="发送文件"
+              isDisabled={disabled}
+              onPress={onOpenFilePicker}
+              className="rounded-full"
+            >
+              <Paperclip className="size-5" />
+            </Button>
+            <div className="flex min-w-0 flex-1 justify-center">
+              {nearLimit ? (
+                <p className="text-xs text-warning">
+                  {value.length}/{PRECHECK.MAX_TEXT_CHARS}
+                </p>
+              ) : (
+                <span className="hidden items-center gap-1.5 text-xs text-muted sm:flex">
+                  <Kbd>Enter</Kbd>
+                  发送
+                  <span aria-hidden="true">·</span>
+                  <Kbd>Shift + Enter</Kbd>
+                  换行
+                </span>
+              )}
+            </div>
+            <Button
+              variant="primary"
+              isIconOnly
+              aria-label="发送"
+              isDisabled={disabled || value.trim() === '' || value.length > PRECHECK.MAX_TEXT_CHARS}
+              onPress={submit}
+              className="rounded-full"
+            >
+              <ArrowUp className="size-5" />
+            </Button>
+          </Toolbar>
+        </Card.Footer>
+      </Card>
     </div>
   );
 }

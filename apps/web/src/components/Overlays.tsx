@@ -1,60 +1,112 @@
-import { Button, Card, Spinner } from '@heroui/react';
-import { DoorOpen, Plus, UserX } from 'lucide-react';
+import { Alert, Button, Card, Skeleton, Spinner } from '@heroui/react';
+import { DoorClosed, Home, UserRoundX } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { formatCountdown } from '../lib/format';
 
 /** 连接中：整页骨架 */
 export function ConnectingOverlay() {
   return (
-    <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 p-4 text-muted">
-      <Spinner size="lg" />
-      <p className="text-sm">正在连接房间…</p>
+    <div className="flex min-h-0 flex-1 items-center justify-center p-4">
+      <Card aria-busy="true" className="w-full max-w-sm p-0">
+        <Card.Header className="flex-col items-center gap-3 px-6 pt-6 text-center">
+          <div className="flex size-11 items-center justify-center rounded-xl bg-default text-foreground">
+            <Spinner size="lg" />
+          </div>
+          <div className="space-y-1">
+            <Card.Title>正在连接房间</Card.Title>
+            <Card.Description>正在验证邀请并建立安全连接。</Card.Description>
+          </div>
+        </Card.Header>
+        <Card.Content className="space-y-4 px-6 py-5" aria-hidden="true">
+          <div className="space-y-2">
+            <Skeleton className="h-3 w-2/5 rounded" />
+            <Skeleton className="h-10 w-full rounded-xl" />
+          </div>
+          <div className="space-y-2">
+            <Skeleton className="h-3 w-3/5 rounded" />
+            <Skeleton className="h-3 w-full rounded" />
+          </div>
+        </Card.Content>
+        <Card.Footer className="px-6 pb-6 pt-0">
+          <p aria-live="polite" className="flex items-center gap-2 text-sm text-muted">
+            <Spinner color="current" size="sm" />
+            连接完成后即可开始传输
+          </p>
+        </Card.Footer>
+      </Card>
     </div>
   );
 }
 
 interface EndOverlayProps {
-  kind: 'peer-left' | 'closed';
   closeReason?: 'manual' | 'expired' | null;
-  onRecreate: () => void;
   onHome: () => void;
 }
 
-/** 终态覆盖层：对方离开（可等待）/ 房间关闭或过期 */
-export function EndOverlay({ kind, closeReason, onRecreate, onHome }: EndOverlayProps) {
-  const title =
-    kind === 'peer-left'
-      ? '对方已离开'
-      : closeReason === 'manual'
-        ? '房间已关闭'
-        : closeReason === 'expired'
-          ? '房间已过期'
-          : '会话已失效';
+/** 终态覆盖层：仅用于已关闭或过期的房间。 */
+export function EndOverlay({ closeReason, onHome }: EndOverlayProps) {
+  const title = closeReason === 'expired' ? '房间已过期' : '房间已关闭';
   const description =
-    kind === 'peer-left'
-      ? '对方可能掉线或关闭了页面。房间保留期间可以用原链接回来，但本会话记录不会同步给新加入的设备。'
-      : '房间已销毁，服务器上的中转文件已删除。';
+    closeReason === 'expired'
+      ? '房间有效期已结束，无法继续发送消息或文件。'
+      : '房间已被关闭，无法继续发送消息或文件。';
 
   return (
     <div className="absolute inset-0 z-20 flex items-center justify-center bg-background/80 p-4 backdrop-blur-sm">
       <Card className="w-full max-w-sm p-0">
-        <Card.Content className="flex flex-col items-center gap-4 p-6">
+        <Card.Header className="flex-col items-center gap-3 px-6 pt-6 text-center">
           <div className="rounded-full bg-default p-3 text-foreground">
-            {kind === 'peer-left' ? <UserX className="size-6" /> : <DoorOpen className="size-6" />}
+            <DoorClosed aria-hidden="true" className="size-6" />
           </div>
-          <div className="text-center">
-            <h2 className="text-lg font-semibold">{title}</h2>
-            <p className="mt-1 text-sm text-muted">{description}</p>
+          <div className="space-y-1">
+            <Card.Title>{title}</Card.Title>
+            <Card.Description>{description}</Card.Description>
           </div>
-          <div className="flex w-full flex-col gap-2">
-            <Button variant="primary" onPress={onRecreate}>
-              <Plus className="size-4" />
-              重新创建房间
-            </Button>
-            <Button variant="tertiary" onPress={onHome}>
-              返回首页
-            </Button>
-          </div>
+        </Card.Header>
+        <Card.Content className="px-6 py-5 text-center text-sm text-muted">
+          要继续传输，请从首页创建新房间，或使用新的邀请链接加入房间。
         </Card.Content>
+        <Card.Footer className="px-6 pb-6 pt-0">
+          <Button fullWidth variant="primary" onPress={onHome}>
+            <Home className="size-4" />
+            返回首页
+          </Button>
+        </Card.Footer>
       </Card>
+    </div>
+  );
+}
+
+interface PeerLeftNoticeProps {
+  reconnectAt: number | null;
+}
+
+/** 非阻断提醒：历史保留，对方仍可在服务端宽限期内恢复原会话。 */
+export function PeerLeftNotice({ reconnectAt }: PeerLeftNoticeProps) {
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    if (reconnectAt === null) return;
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, [reconnectAt]);
+
+  const canReconnect = reconnectAt !== null && reconnectAt > now;
+  const description = canReconnect
+    ? `对方可在 ${formatCountdown(reconnectAt, now)} 内恢复当前会话；聊天记录会保留在当前页面。`
+    : '对方的可重连窗口已结束。聊天记录会保留到当前房间关闭，但无法继续传输。';
+
+  return (
+    <div className="px-4 pt-3">
+      <Alert status="warning">
+        <Alert.Indicator>
+          <UserRoundX aria-hidden="true" className="size-4" />
+        </Alert.Indicator>
+        <Alert.Content>
+          <Alert.Title>对方暂时离开</Alert.Title>
+          <Alert.Description>{description}</Alert.Description>
+        </Alert.Content>
+      </Alert>
     </div>
   );
 }

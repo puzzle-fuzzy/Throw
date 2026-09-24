@@ -11,6 +11,8 @@ interface RoomState {
   reconnectAttempt: number;
   channel: ChannelKind;
   peer: { nickname: string | null } | null;
+  /** 对方断线通知抵达客户端的时刻，用于展示可恢复宽限倒计时 */
+  peerLeftAt: number | null;
   expiresAt: number | null;
   /** 调试/演示：URL ?relay=1 强制中转通道 */
   forceRelay: boolean;
@@ -32,17 +34,28 @@ export const useRoom = create<RoomState>((set) => ({
   reconnectAttempt: 0,
   channel: null,
   peer: null,
+  peerLeftAt: null,
   expiresAt: null,
   forceRelay: false,
 
-  setPhase: (phase) => set({ phase }),
+  setPhase: (phase) =>
+    set({
+      phase,
+      peerLeftAt: phase === 'peer-left' ? Date.now() : null,
+    }),
   setWsStatus: (wsStatus, reconnectAttempt) => set({ wsStatus, reconnectAttempt }),
   setChannel: (channel) => set({ channel }),
   setPeer: (peer) => set({ peer }),
   setExpiresAt: (expiresAt) => set({ expiresAt }),
   setForceRelay: (forceRelay) => set({ forceRelay }),
   markClosed: (reason) =>
-    set({ phase: 'closed', closeReason: reason, wsStatus: 'closed', channel: null }),
+    set({
+      phase: 'closed',
+      closeReason: reason,
+      wsStatus: 'closed',
+      channel: null,
+      peerLeftAt: null,
+    }),
   reset: () =>
     set({
       phase: 'connecting',
@@ -51,6 +64,7 @@ export const useRoom = create<RoomState>((set) => ({
       reconnectAttempt: 0,
       channel: null,
       peer: null,
+      peerLeftAt: null,
       expiresAt: null,
     }),
 }));
